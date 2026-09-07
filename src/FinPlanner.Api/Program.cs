@@ -6,6 +6,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
+    policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
 builder.Services.AddDbContext<FinPlannerDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -22,6 +26,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("frontend");
 
 app.UseAuthorization();
 

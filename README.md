@@ -49,7 +49,9 @@ dotnet user-secrets set --project src/FinPlanner.Api \
 
 ## Database schema
 
-All application database objects are created in the PostgreSQL `finplanner` schema. The first migration defines the `finplanner.FamilyAccounts` table and stores EF migration history in `finplanner.__EFMigrationsHistory`. Generate migrations from the API project with the EF tool available on the PATH:
+All application database objects are created in the PostgreSQL `finplanner` schema. The migrations define `finplanner.FamilyAccounts` and `finplanner.FamilyTransactions`, and store EF migration history in `finplanner.__EFMigrationsHistory`. A family transaction stores a positive monetary amount; `Type` determines whether it is `Income` or `Expense`, and `TransactionDate` supports monthly and yearly reporting.
+
+Generate migrations from the API project with the EF tool available on the PATH:
 
 ```sh
 export PATH="$PATH:$HOME/.dotnet/tools"
@@ -71,4 +73,38 @@ The migration is not applied automatically when the API starts.
 ```sh
 dotnet build src/FinPlanner.Api
 npm run build --prefix src/FinPlanner.Web
+```
+
+## Transaction API
+
+The frontend uses `http://localhost:5140/api` by default. Set `VITE_API_URL` before starting Vite when the API uses another URL:
+
+```sh
+VITE_API_URL=http://localhost:5140/api npm run dev --prefix src/FinPlanner.Web
+```
+
+Available endpoints:
+
+- `GET /api/accounts` - list active family accounts
+- `POST /api/accounts` - create an account
+- `GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&type=Income|Expense` - list transactions
+- `GET /api/transactions/{id}` - read one transaction
+- `POST /api/transactions` - create a transaction
+- `PUT /api/transactions/{id}` - update a transaction
+- `DELETE /api/transactions/{id}` - delete a transaction
+
+Create at least one active account before adding transactions. The transaction screen loads accounts from the API and uses the selected account for every create or update.
+
+## Migration steb by step
+```sh
+dotnet user-secrets init --project src/FinPlanner.Api
+
+dotnet user-secrets set --project src/FinPlanner.Api \
+  "ConnectionStrings:DefaultConnection" \
+  "Host=veronica.lan;Database=xtest;Username=test_admin;Password=ek3a5cLzwnkZTLYDVP03"
+
+export PATH="$PATH:$HOME/.dotnet/tools"
+
+dotnet ef database update \
+  --project src/FinPlanner.Api
 ```
