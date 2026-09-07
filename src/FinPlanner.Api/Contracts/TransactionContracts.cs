@@ -30,3 +30,5 @@ public sealed record UpdateTransactionRequest(
 public sealed record AccountResponse(Guid Id, string Name, FamilyAccountType Type, string Currency, bool IsActive);
 
 public sealed record CreateAccountRequest(string Name, FamilyAccountType Type, string Currency = "EUR");
+
+public sealed record UpdateAccountRequest(string Name, FamilyAccountType Type, string Currency, bool IsActive);

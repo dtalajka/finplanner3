@@ -87,6 +87,9 @@ Available endpoints:
 
 - `GET /api/accounts` - list active family accounts
 - `POST /api/accounts` - create an account
+- `GET /api/accounts/{id}` - read one account
+- `PUT /api/accounts/{id}` - update an account
+- `DELETE /api/accounts/{id}` - deactivate an account while preserving its transactions
 - `GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&type=Income|Expense` - list transactions
 - `GET /api/transactions/{id}` - read one transaction
 - `POST /api/transactions` - create a transaction
