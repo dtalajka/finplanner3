@@ -49,24 +49,20 @@ dotnet user-secrets set --project src/FinPlanner.Api \
 
 ## Database schema
 
-All application database objects are created in the PostgreSQL `finplanner` schema. The migrations define `finplanner.FamilyAccounts` and `finplanner.FamilyTransactions`, and store EF migration history in `finplanner.__EFMigrationsHistory`. A family transaction stores a positive monetary amount; `Type` determines whether it is `Income` or `Expense`, and `TransactionDate` supports monthly and yearly reporting.
+All application database objects are created in the PostgreSQL `finplanner` schema. The EF Core migration is the application’s schema mechanism, with [final-model.sql](final-model.sql) retained as the reference definition. It defines accounts, categories, recurring rules, planned transactions, actual transactions, and the transaction timeline view. Actual transactions use `from_account_id` and `to_account_id`: source only is an expense, destination only is income, and both are a transfer.
 
-Generate migrations from the API project with the EF tool available on the PATH:
+Apply pending application migrations to the configured remote database:
 
 ```sh
 export PATH="$PATH:$HOME/.dotnet/tools"
-dotnet ef migrations add MigrationName \
-	--project src/FinPlanner.Api \
-	--output-dir Data/Migrations
-```
-
-Apply pending migrations to the configured remote database:
-
-```sh
 dotnet ef database update --project src/FinPlanner.Api
 ```
 
-The migration is not applied automatically when the API starts.
+The API does not apply migrations automatically when it starts. To review the SQL first:
+
+```sh
+dotnet ef migrations script --project src/FinPlanner.Api --output finplanner-migrations.sql
+```
 
 ## Validate
 
@@ -75,7 +71,7 @@ dotnet build src/FinPlanner.Api
 npm run build --prefix src/FinPlanner.Web
 ```
 
-## Transaction API
+## API
 
 The frontend uses `http://localhost:5140/api` by default. Set `VITE_API_URL` before starting Vite when the API uses another URL:
 
@@ -85,29 +81,21 @@ VITE_API_URL=http://localhost:5140/api npm run dev --prefix src/FinPlanner.Web
 
 Available endpoints:
 
-- `GET /api/accounts` - list active family accounts
+- `GET /api/accounts` - list accounts
 - `POST /api/accounts` - create an account
 - `GET /api/accounts/{id}` - read one account
 - `PUT /api/accounts/{id}` - update an account
-- `DELETE /api/accounts/{id}` - deactivate an account while preserving its transactions
-- `GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&type=Income|Expense` - list transactions
-- `GET /api/transactions/{id}` - read one transaction
-- `POST /api/transactions` - create a transaction
-- `PUT /api/transactions/{id}` - update a transaction
-- `DELETE /api/transactions/{id}` - delete a transaction
+- `DELETE /api/accounts/{id}` - deactivate an account
+- `GET /api/categories` - list active categories
+- `POST /api/categories` - create a category
+- `GET /api/planning/planned-transactions?from=YYYY-MM-DD&to=YYYY-MM-DD` - list planned transactions
+- `POST /api/planning/planned-transactions` - create a planned transaction
+- `GET /api/planning/recurring-rules` - list recurring rules
+- `POST /api/planning/recurring-rules` - create a recurring rule
+- `GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD&type=Income|Expense` - list actual transactions
+- `GET /api/transactions/{id}` - read one actual transaction
+- `POST /api/transactions` - create an actual transaction
+- `PUT /api/transactions/{id}` - update an actual transaction
+- `DELETE /api/transactions/{id}` - delete an actual transaction
 
 Create at least one active account before adding transactions. The transaction screen loads accounts from the API and uses the selected account for every create or update.
-
-## Migration steb by step
-```sh
-dotnet user-secrets init --project src/FinPlanner.Api
-
-dotnet user-secrets set --project src/FinPlanner.Api \
-  "ConnectionStrings:DefaultConnection" \
-  "Host=veronica.lan;Database=xtest;Username=test_admin;Password=ek3a5cLzwnkZTLYDVP03"
-
-export PATH="$PATH:$HOME/.dotnet/tools"
-
-dotnet ef database update \
-  --project src/FinPlanner.Api
-```

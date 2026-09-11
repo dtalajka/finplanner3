@@ -12,55 +12,49 @@ public sealed class AccountsController(FinPlannerDbContext dbContext) : Controll
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AccountResponse>>> List([FromQuery] bool includeInactive, CancellationToken cancellationToken) => Ok(
-        await dbContext.FamilyAccounts.AsNoTracking().Where(account => includeInactive || account.IsActive).OrderBy(account => account.Name)
-            .Select(account => new AccountResponse(account.Id, account.Name, account.Type, account.Currency, account.IsActive))
-            .ToListAsync(cancellationToken));
+        await dbContext.Accounts.AsNoTracking().Where(account => includeInactive || account.Active).OrderBy(account => account.Name)
+            .Select(account => new AccountResponse(account.Id, account.Name, account.Currency, account.OpeningBalance, account.Active)).ToListAsync(cancellationToken));
 
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<AccountResponse>> Get(Guid id, CancellationToken cancellationToken)
+    [HttpGet("{id:long}")]
+    public async Task<ActionResult<AccountResponse>> Get(long id, CancellationToken cancellationToken)
     {
-        var account = await dbContext.FamilyAccounts.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        var account = await dbContext.Accounts.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
         return account is null ? NotFound() : Ok(ToResponse(account));
     }
 
     [HttpPost]
     public async Task<ActionResult<AccountResponse>> Create(CreateAccountRequest request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 120) return BadRequest("Account name is required and must be 120 characters or fewer.");
-        if (request.Currency.Length != 3) return BadRequest("Currency must be a three-letter code.");
-
-        var account = new FamilyAccount { Id = Guid.NewGuid(), Name = request.Name.Trim(), Type = request.Type, Currency = request.Currency.ToUpperInvariant() };
-        dbContext.FamilyAccounts.Add(account);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Created($"/api/accounts/{account.Id}", new AccountResponse(account.Id, account.Name, account.Type, account.Currency, account.IsActive));
+        if (!Valid(request.Name, request.Currency, request.OpeningBalance, out var error)) return BadRequest(error);
+        var now = DateTime.UtcNow;
+        var account = new Account { Name = request.Name.Trim(), Currency = request.Currency.ToUpperInvariant(), OpeningBalance = request.OpeningBalance, CreatedAt = now, UpdatedAt = now };
+        dbContext.Accounts.Add(account); await dbContext.SaveChangesAsync(cancellationToken);
+        return CreatedAtAction(nameof(Get), new { id = account.Id }, ToResponse(account));
     }
 
-    [HttpPut("{id:guid}")]
-    public async Task<ActionResult<AccountResponse>> Update(Guid id, UpdateAccountRequest request, CancellationToken cancellationToken)
+    [HttpPut("{id:long}")]
+    public async Task<ActionResult<AccountResponse>> Update(long id, UpdateAccountRequest request, CancellationToken cancellationToken)
     {
-        var account = await dbContext.FamilyAccounts.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        var account = await dbContext.Accounts.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (account is null) return NotFound();
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 120) return BadRequest("Account name is required and must be 120 characters or fewer.");
-        if (request.Currency.Length != 3) return BadRequest("Currency must be a three-letter code.");
-
-        account.Name = request.Name.Trim();
-        account.Type = request.Type;
-        account.Currency = request.Currency.ToUpperInvariant();
-        account.IsActive = request.IsActive;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return Ok(ToResponse(account));
+        if (!Valid(request.Name, request.Currency, request.OpeningBalance, out var error)) return BadRequest(error);
+        account.Name = request.Name.Trim(); account.Currency = request.Currency.ToUpperInvariant(); account.OpeningBalance = request.OpeningBalance; account.Active = request.Active; account.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken); return Ok(ToResponse(account));
     }
 
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    [HttpDelete("{id:long}")]
+    public async Task<IActionResult> Delete(long id, CancellationToken cancellationToken)
     {
-        var account = await dbContext.FamilyAccounts.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
-        if (account is null) return NotFound();
-
-        account.IsActive = false;
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return NoContent();
+        var account = await dbContext.Accounts.SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (account is null) return NotFound(); account.Active = false; account.UpdatedAt = DateTime.UtcNow; await dbContext.SaveChangesAsync(cancellationToken); return NoContent();
     }
 
-    private static AccountResponse ToResponse(FamilyAccount account) => new(account.Id, account.Name, account.Type, account.Currency, account.IsActive);
+    private static AccountResponse ToResponse(Account account) => new(account.Id, account.Name, account.Currency, account.OpeningBalance, account.Active);
+    private static bool Valid(string name, string currency, decimal openingBalance, out string error)
+    {
+        if (string.IsNullOrWhiteSpace(name)) { error = "Account name is required."; return false; }
+        if (currency.Length != 3 || currency.Any(character => !char.IsLetter(character))) { error = "Currency must be a three-letter code."; return false; }
+        if (openingBalance < 0 || decimal.Round(openingBalance, 2) != openingBalance) { error = "Opening balance must have at most two decimal places."; return false; }
+        error = string.Empty; return true;
+    }
 }
