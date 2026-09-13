@@ -2,6 +2,8 @@ using FinPlanner.Api.Domain;
 
 namespace FinPlanner.Api.Contracts;
 
+public sealed record UserResponse(long Id, string Name, UserRole Role, long FamilyId);
+
 public sealed record AccountResponse(long Id, string Name, string Currency, decimal OpeningBalance, bool Active);
 public sealed record CreateAccountRequest(string Name, string Currency = "EUR", decimal OpeningBalance = 0);
 public sealed record UpdateAccountRequest(string Name, string Currency, decimal OpeningBalance, bool Active);

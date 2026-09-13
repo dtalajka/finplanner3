@@ -1,6 +1,7 @@
 using FinPlanner.Api.Contracts;
 using FinPlanner.Api.Data;
 using FinPlanner.Api.Domain;
+using FinPlanner.Api.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,16 +9,21 @@ namespace FinPlanner.Api.Controllers;
 
 [ApiController]
 [Route("api/categories")]
-public sealed class CategoriesController(FinPlannerDbContext dbContext) : ControllerBase
+public sealed class CategoriesController(FinPlannerDbContext dbContext, CurrentUserContext currentUser) : TenantControllerBase(currentUser)
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CategoryResponse>>> List(CancellationToken cancellationToken) => Ok(await dbContext.Categories.AsNoTracking().Where(category => category.Active).OrderBy(category => category.Name).Select(category => new CategoryResponse(category.Id, category.Name, category.Type, category.Active)).ToListAsync(cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<CategoryResponse>>> List(CancellationToken cancellationToken)
+    {
+        if (RequireFamily(out var familyId) is { } unauthorized) return unauthorized;
+        return Ok(await dbContext.Categories.AsNoTracking().Where(category => category.FamilyId == familyId && category.Active).OrderBy(category => category.Name).Select(category => new CategoryResponse(category.Id, category.Name, category.Type, category.Active)).ToListAsync(cancellationToken));
+    }
 
     [HttpPost]
     public async Task<ActionResult<CategoryResponse>> Create(CreateCategoryRequest request, CancellationToken cancellationToken)
     {
+        if (RequireFamily(out var familyId) is { } unauthorized) return unauthorized;
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest("Category name is required.");
-        var category = new Category { Name = request.Name.Trim(), Type = request.Type, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var category = new Category { FamilyId = familyId, Name = request.Name.Trim(), Type = request.Type, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         dbContext.Categories.Add(category); await dbContext.SaveChangesAsync(cancellationToken);
         return Created($"/api/categories/{category.Id}", new CategoryResponse(category.Id, category.Name, category.Type, category.Active));
     }

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinPlanner.Api.Data.Migrations
 {
     [DbContext(typeof(FinPlannerDbContext))]
-    [Migration("20260911173644_InitialFinalModel")]
-    partial class InitialFinalModel
+    [Migration("20260913191540_InitialTenantModel")]
+    partial class InitialTenantModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -54,6 +54,10 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnName("currency")
                         .IsFixedLength();
 
+                    b.Property<long>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -73,6 +77,9 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("idx_account_family");
 
                     b.ToTable("account", "finplanner", t =>
                         {
@@ -112,6 +119,10 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<long>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
                     b.Property<long?>("FromAccountId")
                         .HasColumnType("bigint")
                         .HasColumnName("from_account_id");
@@ -133,6 +144,9 @@ namespace FinPlanner.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("idx_actual_transaction_family");
 
                     b.HasIndex("FromAccountId");
 
@@ -173,6 +187,10 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
+                    b.Property<long>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -192,7 +210,7 @@ namespace FinPlanner.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("FamilyId", "Name")
                         .IsUnique()
                         .HasDatabaseName("category_name_uq");
 
@@ -200,6 +218,37 @@ namespace FinPlanner.Api.Data.Migrations
                         {
                             t.HasCheckConstraint("category_type_chk", "type IN ('INCOME', 'EXPENSE')");
                         });
+                });
+
+            modelBuilder.Entity("FinPlanner.Api.Domain.Family", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("family", "finplanner");
                 });
 
             modelBuilder.Entity("FinPlanner.Api.Domain.PlannedTransaction", b =>
@@ -236,6 +285,10 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("description");
 
+                    b.Property<long>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
                     b.Property<long?>("FromAccountId")
                         .HasColumnType("bigint")
                         .HasColumnName("from_account_id");
@@ -261,6 +314,9 @@ namespace FinPlanner.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("idx_planned_transaction_family");
 
                     b.HasIndex("FromAccountId");
 
@@ -322,6 +378,10 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnType("date")
                         .HasColumnName("end_date");
 
+                    b.Property<long>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
                     b.Property<string>("Frequency")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -355,6 +415,9 @@ namespace FinPlanner.Api.Data.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("idx_recurring_rule_family");
+
                     b.HasIndex("FromAccountId");
 
                     b.HasIndex("ToAccountId");
@@ -377,12 +440,74 @@ namespace FinPlanner.Api.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FinPlanner.Api.Domain.User", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<long>("FamilyId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("family_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("role");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("now()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("idx_app_user_family");
+
+                    b.ToTable("app_user", "finplanner", t =>
+                        {
+                            t.HasCheckConstraint("app_user_role_chk", "role IN ('OWNER', 'MEMBER')");
+                        });
+                });
+
+            modelBuilder.Entity("FinPlanner.Api.Domain.Account", b =>
+                {
+                    b.HasOne("FinPlanner.Api.Domain.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinPlanner.Api.Domain.ActualTransaction", b =>
                 {
                     b.HasOne("FinPlanner.Api.Domain.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("FinPlanner.Api.Domain.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("FinPlanner.Api.Domain.Account", null)
                         .WithMany()
@@ -400,12 +525,27 @@ namespace FinPlanner.Api.Data.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
                 });
 
+            modelBuilder.Entity("FinPlanner.Api.Domain.Category", b =>
+                {
+                    b.HasOne("FinPlanner.Api.Domain.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FinPlanner.Api.Domain.PlannedTransaction", b =>
                 {
                     b.HasOne("FinPlanner.Api.Domain.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("FinPlanner.Api.Domain.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("FinPlanner.Api.Domain.Account", null)
                         .WithMany()
@@ -430,6 +570,12 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("FinPlanner.Api.Domain.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("FinPlanner.Api.Domain.Account", null)
                         .WithMany()
                         .HasForeignKey("FromAccountId")
@@ -439,6 +585,15 @@ namespace FinPlanner.Api.Data.Migrations
                         .WithMany()
                         .HasForeignKey("ToAccountId")
                         .OnDelete(DeleteBehavior.NoAction);
+                });
+
+            modelBuilder.Entity("FinPlanner.Api.Domain.User", b =>
+                {
+                    b.HasOne("FinPlanner.Api.Domain.Family", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

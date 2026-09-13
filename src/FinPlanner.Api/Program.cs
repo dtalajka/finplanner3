@@ -1,4 +1,5 @@
 using FinPlanner.Api.Data;
+using FinPlanner.Api.Security;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
@@ -16,6 +17,7 @@ builder.Services.AddDbContext<FinPlannerDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         npgsqlOptions => npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "finplanner")));
+builder.Services.AddScoped<CurrentUserContext>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -32,7 +34,22 @@ app.UseCors("frontend");
 
 app.UseAuthorization();
 
+app.UseMiddleware<TenantResolutionMiddleware>();
+
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<FinPlannerDbContext>();
+        await SeedData.EnsureSeedDataAsync(dbContext);
+    }
+    catch (Exception exception)
+    {
+        app.Logger.LogWarning(exception, "Could not seed initial data. Is the database reachable and migrated?");
+    }
+}
 
 app.MapGet("/api/health/database", async (FinPlannerDbContext dbContext, CancellationToken cancellationToken) =>
 {

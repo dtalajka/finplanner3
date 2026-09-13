@@ -5,6 +5,7 @@ public enum RecurrenceFrequency { Daily, Weekly, Monthly, Yearly }
 public sealed class RecurringRule
 {
     public long Id { get; set; }
+    public long FamilyId { get; set; }
     public required string Name { get; set; }
     public long? FromAccountId { get; set; }
     public long? ToAccountId { get; set; }
