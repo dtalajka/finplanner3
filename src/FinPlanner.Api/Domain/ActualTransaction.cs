@@ -10,6 +10,7 @@ public sealed class ActualTransaction
     public long? ToAccountId { get; set; }
     public long? CategoryId { get; set; }
     public long? PlannedTransactionId { get; set; }
+    public long? GoalId { get; set; }
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

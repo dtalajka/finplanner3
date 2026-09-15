@@ -17,6 +17,7 @@ public static class SeedData
         dbContext.Users.AddRange(
             new User { FamilyId = family.Id, Name = "Person A", Role = UserRole.Owner, CreatedAt = now, UpdatedAt = now },
             new User { FamilyId = family.Id, Name = "Person B", Role = UserRole.Member, CreatedAt = now, UpdatedAt = now });
+        dbContext.Plans.Add(new Plan { FamilyId = family.Id, Name = "Normal", IsDefault = true, IsActive = true, CreatedAt = now, UpdatedAt = now });
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

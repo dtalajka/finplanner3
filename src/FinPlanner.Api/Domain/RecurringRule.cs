@@ -6,6 +6,7 @@ public sealed class RecurringRule
 {
     public long Id { get; set; }
     public long FamilyId { get; set; }
+    public long PlanId { get; set; }
     public required string Name { get; set; }
     public long? FromAccountId { get; set; }
     public long? ToAccountId { get; set; }

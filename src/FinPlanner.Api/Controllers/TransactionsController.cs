@@ -20,7 +20,7 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (to is not null) query = query.Where(item => item.ActualDate <= to);
         if (string.Equals(type, "Income", StringComparison.OrdinalIgnoreCase)) query = query.Where(item => item.FromAccountId == null && item.ToAccountId != null);
         if (string.Equals(type, "Expense", StringComparison.OrdinalIgnoreCase)) query = query.Where(item => item.FromAccountId != null && item.ToAccountId == null);
-        var items = await query.OrderByDescending(item => item.ActualDate).ThenByDescending(item => item.Id).Select(item => new TransactionResponse(item.Id, item.ActualDate, item.Amount, item.FromAccountId, item.ToAccountId, item.CategoryId, item.PlannedTransactionId, item.Description, item.FromAccountId == null ? "INCOME" : item.ToAccountId == null ? "EXPENSE" : "TRANSFER")).ToListAsync(cancellationToken);
+        var items = await query.OrderByDescending(item => item.ActualDate).ThenByDescending(item => item.Id).Select(item => new TransactionResponse(item.Id, item.ActualDate, item.Amount, item.FromAccountId, item.ToAccountId, item.CategoryId, item.PlannedTransactionId, item.Description, item.FromAccountId == null ? "INCOME" : item.ToAccountId == null ? "EXPENSE" : "TRANSFER", item.GoalId)).ToListAsync(cancellationToken);
         return Ok(items);
     }
 
@@ -38,8 +38,10 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (RequireFamily(out var familyId) is { } unauthorized) return unauthorized;
         var validation = await Validate(familyId, request.Date, request.Amount, request.FromAccountId, request.ToAccountId, request.CategoryId, cancellationToken);
         if (validation is not null) return validation;
+        var goalValidation = await ValidateGoalAsync(familyId, request.GoalId, cancellationToken);
+        if (goalValidation is not null) return goalValidation;
         var now = DateTime.UtcNow;
-        var item = new ActualTransaction { FamilyId = familyId, ActualDate = request.Date, Amount = request.Amount, FromAccountId = request.FromAccountId, ToAccountId = request.ToAccountId, CategoryId = request.CategoryId, PlannedTransactionId = request.PlannedTransactionId, Description = request.Description, CreatedAt = now, UpdatedAt = now };
+        var item = new ActualTransaction { FamilyId = familyId, ActualDate = request.Date, Amount = request.Amount, FromAccountId = request.FromAccountId, ToAccountId = request.ToAccountId, CategoryId = request.CategoryId, PlannedTransactionId = request.PlannedTransactionId, GoalId = request.GoalId, Description = request.Description, CreatedAt = now, UpdatedAt = now };
         dbContext.ActualTransactions.Add(item); await dbContext.SaveChangesAsync(cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = item.Id }, ToResponse(item));
     }
@@ -52,7 +54,9 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (item is null) return NotFound();
         var validation = await Validate(familyId, request.Date, request.Amount, request.FromAccountId, request.ToAccountId, request.CategoryId, cancellationToken);
         if (validation is not null) return validation;
-        item.ActualDate = request.Date; item.Amount = request.Amount; item.FromAccountId = request.FromAccountId; item.ToAccountId = request.ToAccountId; item.CategoryId = request.CategoryId; item.PlannedTransactionId = request.PlannedTransactionId; item.Description = request.Description; item.UpdatedAt = DateTime.UtcNow;
+        var goalValidation = await ValidateGoalAsync(familyId, request.GoalId, cancellationToken);
+        if (goalValidation is not null) return goalValidation;
+        item.ActualDate = request.Date; item.Amount = request.Amount; item.FromAccountId = request.FromAccountId; item.ToAccountId = request.ToAccountId; item.CategoryId = request.CategoryId; item.PlannedTransactionId = request.PlannedTransactionId; item.GoalId = request.GoalId; item.Description = request.Description; item.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken); return Ok(ToResponse(item));
     }
 
@@ -62,6 +66,15 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (RequireFamily(out var familyId) is { } unauthorized) return unauthorized;
         var item = await dbContext.ActualTransactions.SingleOrDefaultAsync(transaction => transaction.Id == id && transaction.FamilyId == familyId, cancellationToken);
         if (item is null) return NotFound(); dbContext.ActualTransactions.Remove(item); await dbContext.SaveChangesAsync(cancellationToken); return NoContent();
+    }
+
+    private async Task<ActionResult?> ValidateGoalAsync(long familyId, long? goalId, CancellationToken cancellationToken)
+    {
+        if (goalId is null) return null;
+        var defaultPlan = await dbContext.Plans.AsNoTracking().SingleOrDefaultAsync(plan => plan.FamilyId == familyId && plan.IsDefault, cancellationToken);
+        if (defaultPlan is null) return StatusCode(500, "No default plan is configured for this family.");
+        var belongsToDefaultPlan = await dbContext.Goals.AnyAsync(goal => goal.Id == goalId && goal.FamilyId == familyId && goal.PlanId == defaultPlan.Id, cancellationToken);
+        return belongsToDefaultPlan ? null : BadRequest("The selected goal does not belong to the family's default plan.");
     }
 
     private async Task<ActionResult?> Validate(long familyId, DateOnly date, decimal amount, long? from, long? to, long? categoryId, CancellationToken cancellationToken)
@@ -77,5 +90,5 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         return null;
     }
 
-    private static TransactionResponse ToResponse(ActualTransaction item) => new(item.Id, item.ActualDate, item.Amount, item.FromAccountId, item.ToAccountId, item.CategoryId, item.PlannedTransactionId, item.Description, item.FromAccountId is null ? "INCOME" : item.ToAccountId is null ? "EXPENSE" : "TRANSFER");
+    private static TransactionResponse ToResponse(ActualTransaction item) => new(item.Id, item.ActualDate, item.Amount, item.FromAccountId, item.ToAccountId, item.CategoryId, item.PlannedTransactionId, item.Description, item.FromAccountId is null ? "INCOME" : item.ToAccountId is null ? "EXPENSE" : "TRANSFER", item.GoalId);
 }

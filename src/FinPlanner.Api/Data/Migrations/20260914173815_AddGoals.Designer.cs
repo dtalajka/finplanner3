@@ -3,6 +3,7 @@ using System;
 using FinPlanner.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinPlanner.Api.Data.Migrations
 {
     [DbContext(typeof(FinPlannerDbContext))]
-    partial class FinPlannerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914173815_AddGoals")]
+    partial class AddGoals
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -239,13 +242,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<decimal>("DefaultMinimumReserve")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("default_minimum_reserve");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -259,10 +255,7 @@ namespace FinPlanner.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("family", "finplanner", t =>
-                        {
-                            t.HasCheckConstraint("family_default_minimum_reserve_chk", "default_minimum_reserve >= 0");
-                        });
+                    b.ToTable("family", "finplanner");
                 });
 
             modelBuilder.Entity("FinPlanner.Api.Domain.Goal", b =>
@@ -381,11 +374,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_default");
 
-                    b.Property<decimal?>("MinimumReserve")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("minimum_reserve");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -404,10 +392,7 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDatabaseName("uq_plan_family_default")
                         .HasFilter("is_default");
 
-                    b.ToTable("plan", "finplanner", t =>
-                        {
-                            t.HasCheckConstraint("plan_minimum_reserve_chk", "minimum_reserve IS NULL OR minimum_reserve >= 0");
-                        });
+                    b.ToTable("plan", "finplanner");
                 });
 
             modelBuilder.Entity("FinPlanner.Api.Domain.PlannedTransaction", b =>

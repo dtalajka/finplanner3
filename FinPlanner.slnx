@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/FinPlanner.Api/FinPlanner.Api.csproj" />
+    <Project Path="src/FinPlanner.Api.Tests/FinPlanner.Api.Tests.csproj" />
   </Folder>
 </Solution>

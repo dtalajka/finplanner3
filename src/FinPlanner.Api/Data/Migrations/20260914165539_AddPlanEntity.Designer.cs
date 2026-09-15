@@ -3,6 +3,7 @@ using System;
 using FinPlanner.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinPlanner.Api.Data.Migrations
 {
     [DbContext(typeof(FinPlannerDbContext))]
-    partial class FinPlannerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914165539_AddPlanEntity")]
+    partial class AddPlanEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -124,10 +127,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("from_account_id");
 
-                    b.Property<long?>("GoalId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("goal_id");
-
                     b.Property<long?>("PlannedTransactionId")
                         .HasColumnType("bigint")
                         .HasColumnName("planned_transaction_id");
@@ -150,9 +149,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDatabaseName("idx_actual_transaction_family");
 
                     b.HasIndex("FromAccountId");
-
-                    b.HasIndex("GoalId")
-                        .HasDatabaseName("idx_actual_transaction_goal");
 
                     b.HasIndex("PlannedTransactionId");
 
@@ -239,13 +235,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<decimal>("DefaultMinimumReserve")
-                        .ValueGeneratedOnAdd()
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasDefaultValue(0m)
-                        .HasColumnName("default_minimum_reserve");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -259,91 +248,7 @@ namespace FinPlanner.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("family", "finplanner", t =>
-                        {
-                            t.HasCheckConstraint("family_default_minimum_reserve_chk", "default_minimum_reserve >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("FinPlanner.Api.Domain.Goal", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Active")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("active");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text")
-                        .HasColumnName("description");
-
-                    b.Property<long>("FamilyId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("family_id");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<long>("PlanId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("plan_id");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasColumnName("priority");
-
-                    b.Property<long?>("RecurringRuleId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("recurring_rule_id");
-
-                    b.Property<decimal>("TargetAmount")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("target_amount");
-
-                    b.Property<DateOnly>("TargetDate")
-                        .HasColumnType("date")
-                        .HasColumnName("target_date");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FamilyId")
-                        .HasDatabaseName("idx_goal_family");
-
-                    b.HasIndex("PlanId")
-                        .HasDatabaseName("idx_goal_plan");
-
-                    b.HasIndex("RecurringRuleId");
-
-                    b.ToTable("goal", "finplanner", t =>
-                        {
-                            t.HasCheckConstraint("goal_priority_chk", "priority IN ('HARD', 'SOFT')");
-
-                            t.HasCheckConstraint("goal_target_amount_chk", "target_amount > 0");
-                        });
+                    b.ToTable("family", "finplanner");
                 });
 
             modelBuilder.Entity("FinPlanner.Api.Domain.Plan", b =>
@@ -381,11 +286,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_default");
 
-                    b.Property<decimal?>("MinimumReserve")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("minimum_reserve");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
@@ -404,10 +304,7 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDatabaseName("uq_plan_family_default")
                         .HasFilter("is_default");
 
-                    b.ToTable("plan", "finplanner", t =>
-                        {
-                            t.HasCheckConstraint("plan_minimum_reserve_chk", "minimum_reserve IS NULL OR minimum_reserve >= 0");
-                        });
+                    b.ToTable("plan", "finplanner");
                 });
 
             modelBuilder.Entity("FinPlanner.Api.Domain.PlannedTransaction", b =>
@@ -452,10 +349,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("from_account_id");
 
-                    b.Property<long?>("GoalId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("goal_id");
-
                     b.Property<long>("PlanId")
                         .HasColumnType("bigint")
                         .HasColumnName("plan_id");
@@ -486,9 +379,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDatabaseName("idx_planned_transaction_family");
 
                     b.HasIndex("FromAccountId");
-
-                    b.HasIndex("GoalId")
-                        .HasDatabaseName("idx_planned_transaction_goal");
 
                     b.HasIndex("PlanId")
                         .HasDatabaseName("idx_planned_transaction_plan");
@@ -694,11 +584,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasForeignKey("FromAccountId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.HasOne("FinPlanner.Api.Domain.Goal", null)
-                        .WithMany()
-                        .HasForeignKey("GoalId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.HasOne("FinPlanner.Api.Domain.PlannedTransaction", null)
                         .WithMany()
                         .HasForeignKey("PlannedTransactionId")
@@ -717,26 +602,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasForeignKey("FamilyId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("FinPlanner.Api.Domain.Goal", b =>
-                {
-                    b.HasOne("FinPlanner.Api.Domain.Family", null)
-                        .WithMany()
-                        .HasForeignKey("FamilyId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("FinPlanner.Api.Domain.Plan", null)
-                        .WithMany()
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("FinPlanner.Api.Domain.RecurringRule", null)
-                        .WithMany()
-                        .HasForeignKey("RecurringRuleId")
-                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("FinPlanner.Api.Domain.Plan", b =>
@@ -764,11 +629,6 @@ namespace FinPlanner.Api.Data.Migrations
                     b.HasOne("FinPlanner.Api.Domain.Account", null)
                         .WithMany()
                         .HasForeignKey("FromAccountId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("FinPlanner.Api.Domain.Goal", null)
-                        .WithMany()
-                        .HasForeignKey("GoalId")
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("FinPlanner.Api.Domain.Plan", null)

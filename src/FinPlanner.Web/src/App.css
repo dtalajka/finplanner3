@@ -13,8 +13,41 @@ nav { display: grid; gap: 5px; }.nav-item { border: 0; background: transparent; 
 .account-panel { margin-top: 18px; }.account-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #edf0eb; }.account-badge { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 8px; background: #e3f0e4; color: #42765e; font: 700 12px 'Space Grotesk', sans-serif; }.account-row .transaction-info { flex: 1; }.account-row .row-action { flex: 0 0 auto; }
 .modal-global-close { display: none; }
 .checkbox-label { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 8px !important; padding-top: 23px; }.checkbox-label input { width: 16px; height: 16px; accent-color: #5c9675; }
-.app-shell.accounts .transaction-panel, .app-shell.accounts .metric-grid { display: none; }.app-shell:not(.accounts) .account-panel { display: none; }
-.model-panel { display: none; margin-top: 18px; }.model-panel.visible-panel { display: block; }.app-shell:not(.transactions) .transaction-panel, .app-shell:not(.transactions) .metric-grid { display: none; }.app-shell:not(.accounts) .account-panel { display: none; }
+.app-shell.accounts .transaction-panel { display: none; }.app-shell:not(.accounts) .account-panel { display: none; }
+.model-panel { display: none; margin-top: 18px; }.model-panel.visible-panel { display: block; }.app-shell:not(.transactions) .transaction-panel { display: none; }.app-shell:not(.accounts) .account-panel { display: none; }.plan-metric-grid { margin-bottom: 20px; }
+.pill { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+.pill-active { background: #e3f0e4; color: #42765e; }
+.pill-overdue { background: #fbe6e0; color: #b6553a; }
+.pill-complete { background: #e6f2f8; color: #4b91bc; }
+.goal-progress { margin-top: 7px; max-width: 220px; }
+.pill-matched { background: #e6f2f8; color: #4b91bc; }
+.pill-unplanned { background: #f1eef7; color: #7c6a99; }
+.pill-recurring { background: #faf2cd; color: #a78b39; }
+.pill-planned { background: #e3f0e4; color: #42765e; }
+.pill-actual { background: #e6f2f8; color: #4b91bc; }
+.forecast-chart-wrap { position: relative; margin: 4px 0 22px; }
+.forecast-chart { width: 100%; height: 170px; display: block; cursor: crosshair; }
+.forecast-chart-line { fill: none; stroke: #4eaf78; stroke-width: 2; }
+.forecast-chart-zero { stroke: #e2a26b; stroke-width: 1; stroke-dasharray: 4 3; }
+.forecast-chart-min { fill: #d47853; }
+.forecast-chart-gridline { stroke: #edf1eb; stroke-width: 1; }
+.forecast-chart-axis-label { font: 500 8px 'DM Sans', sans-serif; fill: #8c9d93; }
+.forecast-chart-hover-line { stroke: #9aa89f; stroke-width: 1; stroke-dasharray: 3 3; }
+.forecast-chart-hover-dot { fill: #193a31; }
+.forecast-chart-tooltip { position: absolute; transform: translate(-50%, calc(-100% - 10px)); background: #193a31; color: #fff; padding: 5px 9px; border-radius: 6px; font-size: 11px; white-space: nowrap; pointer-events: none; }
+.forecast-chart-tooltip strong { display: block; font-size: 9px; font-weight: 500; opacity: .75; }
+.pill-funded { background: #e3f0e4; color: #42765e; }
+.pill-at_risk { background: #fbe6e0; color: #b6553a; }
+.reserve-row { align-items: end; margin: 6px 0 20px; grid-template-columns: repeat(4, auto); }
+.reserve-row input { width: 140px; }
+.reserve-row .add-button { align-self: end; height: 38px; }
+.goal-feasibility-list { margin-bottom: 22px; }
+.pill-favorable { background: #e3f0e4; color: #42765e; }
+.pill-unfavorable { background: #fbe6e0; color: #b6553a; }
+.pill-on_plan { background: #e6f2f8; color: #4b91bc; }
+.compliance-panel .panel-heading { align-items: center; }
+.compliance-panel .panel-heading select { margin-left: auto; }
+.goal-feasibility-list .transaction { justify-content: space-between; }
 .transaction-panel .transaction-filters { display: none; }
 .period-controls { display: flex; align-items: center; gap: 7px; }.period-controls input, .period-controls select { border: 1px solid #dce3dc; background: #fff; color: #52655b; border-radius: 6px; padding: 10px 11px; font: 600 11px 'DM Sans', sans-serif; }.month-arrow { width: 30px; height: 30px; border: 1px solid #dce3dc; background: #fff; color: #527464; border-radius: 6px; cursor: pointer; font-size: 20px; line-height: 20px; }.month-arrow:hover { background: #e8f2e5; color: #285246; }
 @media (max-width: 1000px) { .sidebar { width: 196px; flex-basis: 196px; }.metric-grid { grid-template-columns: repeat(2, 1fr); }.dashboard-grid { grid-template-columns: 1fr; } }
