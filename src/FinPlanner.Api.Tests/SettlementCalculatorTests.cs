@@ -7,7 +7,7 @@ namespace FinPlanner.Api.Tests;
 public class SettlementCalculatorTests
 {
     private static User MakeUser(long id, string name) =>
-        new() { Id = id, FamilyId = 1, Name = name, Role = UserRole.Member, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        new() { Id = id, FamilyId = 1, Name = name, Email = $"{name.ToLowerInvariant()}-{id}@test.local", PasswordHash = "test-placeholder-hash", Role = UserRole.Member, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
 
     private static Account MakeAccount(long id, string name, long? ownerUserId) =>
         new() { Id = id, FamilyId = 1, Name = name, Currency = "EUR", OpeningBalance = 0, OwnerUserId = ownerUserId, Active = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };

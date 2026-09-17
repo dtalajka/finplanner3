@@ -2,7 +2,10 @@ using FinPlanner.Api.Domain;
 
 namespace FinPlanner.Api.Contracts;
 
-public sealed record UserResponse(long Id, string Name, UserRole Role, long FamilyId);
+public sealed record UserResponse(long Id, string Name, UserRole Role, long FamilyId, string Email);
+public sealed record RegisterRequest(string FamilyName, string Name, string Email, string Password);
+public sealed record LoginRequest(string Email, string Password);
+public sealed record CreateFamilyMemberRequest(string Name, string Email, string Password, UserRole Role);
 
 public sealed record PlanResponse(long Id, string Name, string? Description, bool IsDefault, bool IsActive, decimal? MinimumReserve);
 public sealed record CreatePlanRequest(string Name, string? Description);

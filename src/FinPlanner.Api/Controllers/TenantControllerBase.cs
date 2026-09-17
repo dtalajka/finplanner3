@@ -18,7 +18,7 @@ public abstract class TenantControllerBase(CurrentUserContext currentUser) : Con
         }
 
         familyId = default;
-        return Unauthorized("Missing or unknown X-User-Id header.");
+        return Unauthorized("Not authenticated.");
     }
 
     protected async Task<(long PlanId, ActionResult? Error)> ResolvePlanAsync(FinPlannerDbContext dbContext, long familyId, long? requestedPlanId, CancellationToken cancellationToken)

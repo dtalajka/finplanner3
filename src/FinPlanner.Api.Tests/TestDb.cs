@@ -32,10 +32,12 @@ internal static class TestDb
         return account;
     }
 
-    public static async Task<User> AddUserAsync(FinPlannerDbContext dbContext, long familyId, string name = "Person", UserRole role = UserRole.Member)
+    public static async Task<User> AddUserAsync(FinPlannerDbContext dbContext, long familyId, string name = "Person", UserRole role = UserRole.Member, string? email = null)
     {
         var now = DateTime.UtcNow;
-        var user = new User { FamilyId = familyId, Name = name, Role = role, CreatedAt = now, UpdatedAt = now };
+        // Unique-per-call placeholder unless the test supplies its own — these controller-level tests never
+        // exercise the real login/hashing path (that's WebApplicationFactory-based AuthenticationTests instead).
+        var user = new User { FamilyId = familyId, Name = name, Email = email ?? $"{Guid.NewGuid():N}@test.local", PasswordHash = "test-placeholder-hash", Role = role, CreatedAt = now, UpdatedAt = now };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
         return user;

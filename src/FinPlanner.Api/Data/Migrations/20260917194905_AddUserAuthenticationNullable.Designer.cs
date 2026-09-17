@@ -3,6 +3,7 @@ using System;
 using FinPlanner.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinPlanner.Api.Data.Migrations
 {
     [DbContext(typeof(FinPlannerDbContext))]
-    partial class FinPlannerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917194905_AddUserAuthenticationNullable")]
+    partial class AddUserAuthenticationNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -759,7 +762,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasDefaultValueSql("now()");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("email");
 
@@ -773,7 +775,6 @@ namespace FinPlanner.Api.Data.Migrations
                         .HasColumnName("name");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("password_hash");
 

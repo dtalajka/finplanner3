@@ -41,11 +41,17 @@ public sealed class FinPlannerDbContext(DbContextOptions<FinPlannerDbContext> op
             entity.Property(user => user.Id).HasColumnName("id").ValueGeneratedOnAdd();
             entity.Property(user => user.FamilyId).HasColumnName("family_id").IsRequired();
             entity.Property(user => user.Name).HasColumnName("name").IsRequired();
+            entity.Property(user => user.Email).HasColumnName("email").IsRequired();
+            entity.Property(user => user.PasswordHash).HasColumnName("password_hash").IsRequired();
             entity.Property(user => user.Role).HasColumnName("role").HasMaxLength(10).HasConversion(value => value.ToString().ToUpperInvariant(), value => Enum.Parse<UserRole>(value, true));
             entity.Property(user => user.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
             entity.Property(user => user.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
             entity.HasOne<Family>().WithMany().HasForeignKey(user => user.FamilyId).OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(user => user.FamilyId).HasDatabaseName("idx_app_user_family");
+            // Global (not per-family) uniqueness — login happens before the family is known. Email is always
+            // stored pre-normalized to lowercase (AuthController.NormalizeEmail), so a plain unique index here
+            // already gives case-insensitive uniqueness without a citext extension or expression index.
+            entity.HasIndex(user => user.Email).IsUnique().HasDatabaseName("uq_app_user_email");
             entity.HasCheckConstraint("app_user_role_chk", "role IN ('OWNER', 'MEMBER')");
         });
 
