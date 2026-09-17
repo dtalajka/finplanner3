@@ -15,6 +15,8 @@ public sealed class FinPlannerDbContext(DbContextOptions<FinPlannerDbContext> op
     public DbSet<RecurringRule> RecurringRules => Set<RecurringRule>();
     public DbSet<PlannedTransaction> PlannedTransactions => Set<PlannedTransaction>();
     public DbSet<ActualTransaction> ActualTransactions => Set<ActualTransaction>();
+    public DbSet<ExpenseAllocationRule> ExpenseAllocationRules => Set<ExpenseAllocationRule>();
+    public DbSet<ExpenseAllocationShare> ExpenseAllocationShares => Set<ExpenseAllocationShare>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -99,11 +101,14 @@ public sealed class FinPlannerDbContext(DbContextOptions<FinPlannerDbContext> op
             entity.Property(account => account.Name).HasColumnName("name").IsRequired();
             entity.Property(account => account.Currency).HasColumnName("currency").HasMaxLength(3).IsFixedLength().IsRequired();
             entity.Property(account => account.OpeningBalance).HasColumnName("opening_balance").HasPrecision(14, 2).HasDefaultValue(0m);
+            entity.Property(account => account.OwnerUserId).HasColumnName("owner_user_id");
             entity.Property(account => account.Active).HasColumnName("active").HasDefaultValue(true);
             entity.Property(account => account.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
             entity.Property(account => account.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
             entity.HasOne<Family>().WithMany().HasForeignKey(account => account.FamilyId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<User>().WithMany().HasForeignKey(account => account.OwnerUserId).OnDelete(DeleteBehavior.NoAction);
             entity.HasIndex(account => account.FamilyId).HasDatabaseName("idx_account_family");
+            entity.HasIndex(account => account.OwnerUserId).HasDatabaseName("idx_account_owner");
             entity.HasCheckConstraint("account_currency_chk", "currency ~ '^[A-Z]{3}$'");
         });
 
@@ -126,7 +131,61 @@ public sealed class FinPlannerDbContext(DbContextOptions<FinPlannerDbContext> op
         ConfigureRecurring(modelBuilder.Entity<RecurringRule>());
         ConfigurePlanned(modelBuilder.Entity<PlannedTransaction>());
         ConfigureActual(modelBuilder.Entity<ActualTransaction>());
+        ConfigureAllocationRule(modelBuilder.Entity<ExpenseAllocationRule>());
+        ConfigureAllocationShare(modelBuilder.Entity<ExpenseAllocationShare>());
     }
+
+    private static void ConfigureAllocationRule(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<ExpenseAllocationRule> entity)
+    {
+        entity.ToTable("expense_allocation_rule"); entity.HasKey(item => item.Id); entity.Property(item => item.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        entity.Property(item => item.FamilyId).HasColumnName("family_id").IsRequired(); entity.Property(item => item.CategoryId).HasColumnName("category_id");
+        entity.Property(item => item.Method).HasColumnName("method").HasMaxLength(20).HasConversion(value => MethodToColumn(value), value => MethodFromColumn(value));
+        entity.Property(item => item.Active).HasColumnName("active").HasDefaultValue(true);
+        entity.Property(item => item.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+        entity.Property(item => item.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
+        entity.HasOne<Family>().WithMany().HasForeignKey(item => item.FamilyId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasOne<Category>().WithMany().HasForeignKey(item => item.CategoryId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasIndex(item => item.FamilyId).HasDatabaseName("idx_expense_allocation_rule_family");
+        // At most one active rule per category, and at most one active family-default rule (category_id IS NULL) — resolves
+        // the "which rule wins" ambiguity that Part L's I-A3 (category-specific beats family-default) assumes is unambiguous.
+        entity.HasIndex(item => new { item.FamilyId, item.CategoryId }).IsUnique().HasFilter("active AND category_id IS NOT NULL").HasDatabaseName("uq_expense_allocation_rule_family_category");
+        entity.HasIndex(item => item.FamilyId).IsUnique().HasFilter("active AND category_id IS NULL").HasDatabaseName("uq_expense_allocation_rule_family_default");
+        entity.HasCheckConstraint("expense_allocation_rule_method_chk", "method IN ('FIXED_PERCENTAGE', 'EQUAL', 'INCOME_RATIO', 'FIXED_AMOUNT')");
+    }
+
+    private static void ConfigureAllocationShare(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<ExpenseAllocationShare> entity)
+    {
+        entity.ToTable("expense_allocation_share"); entity.HasKey(item => item.Id); entity.Property(item => item.Id).HasColumnName("id").ValueGeneratedOnAdd();
+        entity.Property(item => item.FamilyId).HasColumnName("family_id").IsRequired(); entity.Property(item => item.AllocationRuleId).HasColumnName("allocation_rule_id").IsRequired();
+        entity.Property(item => item.UserId).HasColumnName("user_id").IsRequired();
+        entity.Property(item => item.Percentage).HasColumnName("percentage").HasPrecision(5, 2);
+        entity.Property(item => item.FixedAmount).HasColumnName("fixed_amount").HasPrecision(14, 2);
+        entity.HasOne<Family>().WithMany().HasForeignKey(item => item.FamilyId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasOne<ExpenseAllocationRule>().WithMany().HasForeignKey(item => item.AllocationRuleId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasOne<User>().WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.NoAction);
+        entity.HasIndex(item => item.AllocationRuleId).HasDatabaseName("idx_expense_allocation_share_rule");
+        entity.HasIndex(item => new { item.AllocationRuleId, item.UserId }).IsUnique().HasDatabaseName("uq_expense_allocation_share_rule_user");
+        entity.HasCheckConstraint("expense_allocation_share_percentage_chk", "percentage IS NULL OR (percentage >= 0 AND percentage <= 100)");
+        entity.HasCheckConstraint("expense_allocation_share_fixed_amount_chk", "fixed_amount IS NULL OR fixed_amount >= 0");
+    }
+
+    private static string MethodToColumn(ExpenseAllocationMethod method) => method switch
+    {
+        ExpenseAllocationMethod.FixedPercentage => "FIXED_PERCENTAGE",
+        ExpenseAllocationMethod.Equal => "EQUAL",
+        ExpenseAllocationMethod.IncomeRatio => "INCOME_RATIO",
+        ExpenseAllocationMethod.FixedAmount => "FIXED_AMOUNT",
+        _ => throw new ArgumentOutOfRangeException(nameof(method))
+    };
+
+    private static ExpenseAllocationMethod MethodFromColumn(string value) => value switch
+    {
+        "FIXED_PERCENTAGE" => ExpenseAllocationMethod.FixedPercentage,
+        "EQUAL" => ExpenseAllocationMethod.Equal,
+        "INCOME_RATIO" => ExpenseAllocationMethod.IncomeRatio,
+        "FIXED_AMOUNT" => ExpenseAllocationMethod.FixedAmount,
+        _ => throw new ArgumentOutOfRangeException(nameof(value))
+    };
 
     private static void ConfigureRecurring(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<RecurringRule> entity)
     {

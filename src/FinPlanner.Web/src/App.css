@@ -48,6 +48,8 @@ nav { display: grid; gap: 5px; }.nav-item { border: 0; background: transparent; 
 .compliance-panel .panel-heading { align-items: center; }
 .compliance-panel .panel-heading select { margin-left: auto; }
 .goal-feasibility-list .transaction { justify-content: space-between; }
+.settlement-panel .panel-heading { align-items: center; }
+.settlement-panel .panel-heading input[type="month"] { margin-left: auto; border: 1px solid #dce3dc; background: #fff; color: #52655b; border-radius: 6px; padding: 9px 11px; font: 600 11px 'DM Sans', sans-serif; }
 .transaction-panel .transaction-filters { display: none; }
 .period-controls { display: flex; align-items: center; gap: 7px; }.period-controls input, .period-controls select { border: 1px solid #dce3dc; background: #fff; color: #52655b; border-radius: 6px; padding: 10px 11px; font: 600 11px 'DM Sans', sans-serif; }.month-arrow { width: 30px; height: 30px; border: 1px solid #dce3dc; background: #fff; color: #527464; border-radius: 6px; cursor: pointer; font-size: 20px; line-height: 20px; }.month-arrow:hover { background: #e8f2e5; color: #285246; }
 @media (max-width: 1000px) { .sidebar { width: 196px; flex-basis: 196px; }.metric-grid { grid-template-columns: repeat(2, 1fr); }.dashboard-grid { grid-template-columns: 1fr; } }

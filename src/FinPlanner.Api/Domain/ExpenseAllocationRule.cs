@@ -1,13 +1,13 @@
 namespace FinPlanner.Api.Domain;
 
-public sealed class Account
+public enum ExpenseAllocationMethod { FixedPercentage, Equal, IncomeRatio, FixedAmount }
+
+public sealed class ExpenseAllocationRule
 {
     public long Id { get; set; }
     public long FamilyId { get; set; }
-    public required string Name { get; set; }
-    public string Currency { get; set; } = "EUR";
-    public decimal OpeningBalance { get; set; }
-    public long? OwnerUserId { get; set; }
+    public long? CategoryId { get; set; }
+    public ExpenseAllocationMethod Method { get; set; }
     public bool Active { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

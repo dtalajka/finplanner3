@@ -11,9 +11,9 @@ public sealed record SetPlanReserveRequest(decimal? MinimumReserve);
 public sealed record FamilyResponse(long Id, string Name, decimal DefaultMinimumReserve);
 public sealed record UpdateFamilyReserveRequest(decimal DefaultMinimumReserve);
 
-public sealed record AccountResponse(long Id, string Name, string Currency, decimal OpeningBalance, bool Active);
-public sealed record CreateAccountRequest(string Name, string Currency = "EUR", decimal OpeningBalance = 0);
-public sealed record UpdateAccountRequest(string Name, string Currency, decimal OpeningBalance, bool Active);
+public sealed record AccountResponse(long Id, string Name, string Currency, decimal OpeningBalance, long? OwnerUserId, bool Active);
+public sealed record CreateAccountRequest(string Name, string Currency = "EUR", decimal OpeningBalance = 0, long? OwnerUserId = null);
+public sealed record UpdateAccountRequest(string Name, string Currency, decimal OpeningBalance, bool Active, long? OwnerUserId = null);
 
 public sealed record TransactionResponse(long Id, DateOnly Date, decimal Amount, long? FromAccountId, long? ToAccountId, long? CategoryId, long? PlannedTransactionId, string? Description, string TransactionType, long? GoalId);
 public sealed record CreateTransactionRequest(DateOnly Date, decimal Amount, long? FromAccountId, long? ToAccountId, long? CategoryId, long? PlannedTransactionId, string? Description, long? GoalId = null);
@@ -46,3 +46,13 @@ public sealed record GoalComplianceResponse(long GoalId, string GoalName, GoalPr
 public sealed record ComplianceTotalsResponse(decimal PlannedIncome, decimal ActualIncome, decimal IncomeVariance, decimal PlannedExpense, decimal ActualExpense, decimal ExpenseVariance, decimal NetVariance, decimal? CategoriesOnPlanRatio);
 public sealed record PeriodComplianceResponse(DateOnly PeriodStart, DateOnly PeriodEnd, string Status, IReadOnlyList<CategoryComplianceResponse> Categories, IReadOnlyList<GoalComplianceResponse> Goals, ComplianceTotalsResponse Totals);
 public sealed record PlanComplianceResponse(long PlanId, DateOnly AsOf, DateOnly From, DateOnly To, IReadOnlyList<PeriodComplianceResponse> Periods, ComplianceTotalsResponse Totals);
+
+public sealed record AllocationShareRequest(long UserId, decimal? Percentage, decimal? FixedAmount);
+public sealed record AllocationShareResponse(long UserId, decimal? Percentage, decimal? FixedAmount);
+public sealed record CreateAllocationRuleRequest(long? CategoryId, ExpenseAllocationMethod Method, IReadOnlyList<AllocationShareRequest> Shares);
+public sealed record UpdateAllocationRuleRequest(long? CategoryId, ExpenseAllocationMethod Method, IReadOnlyList<AllocationShareRequest> Shares);
+public sealed record AllocationRuleResponse(long Id, long? CategoryId, ExpenseAllocationMethod Method, bool Active, IReadOnlyList<AllocationShareResponse> Shares);
+
+public sealed record UserSettlementResponse(long UserId, string Name, decimal TotalPaid, decimal TotalExpectedContribution, decimal Settlement);
+public sealed record CategorySettlementResponse(long? CategoryId, string CategoryName, string Method, decimal TotalAmount, IReadOnlyDictionary<long, decimal> PerUserExpected);
+public sealed record SettlementResponse(long FamilyId, DateOnly From, DateOnly To, IReadOnlyList<UserSettlementResponse> Users, decimal PoolContribution, decimal UnattributedAmount, IReadOnlyList<CategorySettlementResponse> Categories);

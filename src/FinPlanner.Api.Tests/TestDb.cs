@@ -23,13 +23,22 @@ internal static class TestDb
         return (family, plan);
     }
 
-    public static async Task<Account> AddAccountAsync(FinPlannerDbContext dbContext, long familyId, string name = "Joint")
+    public static async Task<Account> AddAccountAsync(FinPlannerDbContext dbContext, long familyId, string name = "Joint", long? ownerUserId = null)
     {
         var now = DateTime.UtcNow;
-        var account = new Account { FamilyId = familyId, Name = name, Currency = "EUR", OpeningBalance = 0, Active = true, CreatedAt = now, UpdatedAt = now };
+        var account = new Account { FamilyId = familyId, Name = name, Currency = "EUR", OpeningBalance = 0, OwnerUserId = ownerUserId, Active = true, CreatedAt = now, UpdatedAt = now };
         dbContext.Accounts.Add(account);
         await dbContext.SaveChangesAsync();
         return account;
+    }
+
+    public static async Task<User> AddUserAsync(FinPlannerDbContext dbContext, long familyId, string name = "Person", UserRole role = UserRole.Member)
+    {
+        var now = DateTime.UtcNow;
+        var user = new User { FamilyId = familyId, Name = name, Role = role, CreatedAt = now, UpdatedAt = now };
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+        return user;
     }
 
     public static async Task<Plan> AddPlanAsync(FinPlannerDbContext dbContext, long familyId, string name = "Other Plan")
