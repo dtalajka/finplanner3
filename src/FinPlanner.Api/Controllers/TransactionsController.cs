@@ -40,6 +40,8 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (validation is not null) return validation;
         var goalValidation = await ValidateGoalAsync(familyId, request.GoalId, cancellationToken);
         if (goalValidation is not null) return goalValidation;
+        var plannedValidation = await ValidatePlannedTransactionAsync(familyId, request.PlannedTransactionId, excludingActualId: null, cancellationToken);
+        if (plannedValidation is not null) return plannedValidation;
         var now = DateTime.UtcNow;
         var item = new ActualTransaction { FamilyId = familyId, ActualDate = request.Date, Amount = request.Amount, FromAccountId = request.FromAccountId, ToAccountId = request.ToAccountId, CategoryId = request.CategoryId, PlannedTransactionId = request.PlannedTransactionId, GoalId = request.GoalId, Description = request.Description, CreatedAt = now, UpdatedAt = now };
         dbContext.ActualTransactions.Add(item); await dbContext.SaveChangesAsync(cancellationToken);
@@ -56,6 +58,8 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (validation is not null) return validation;
         var goalValidation = await ValidateGoalAsync(familyId, request.GoalId, cancellationToken);
         if (goalValidation is not null) return goalValidation;
+        var plannedValidation = await ValidatePlannedTransactionAsync(familyId, request.PlannedTransactionId, excludingActualId: id, cancellationToken);
+        if (plannedValidation is not null) return plannedValidation;
         item.ActualDate = request.Date; item.Amount = request.Amount; item.FromAccountId = request.FromAccountId; item.ToAccountId = request.ToAccountId; item.CategoryId = request.CategoryId; item.PlannedTransactionId = request.PlannedTransactionId; item.GoalId = request.GoalId; item.Description = request.Description; item.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken); return Ok(ToResponse(item));
     }
@@ -75,6 +79,19 @@ public sealed class TransactionsController(FinPlannerDbContext dbContext, Curren
         if (defaultPlan is null) return StatusCode(500, "No default plan is configured for this family.");
         var belongsToDefaultPlan = await dbContext.Goals.AnyAsync(goal => goal.Id == goalId && goal.FamilyId == familyId && goal.PlanId == defaultPlan.Id, cancellationToken);
         return belongsToDefaultPlan ? null : BadRequest("The selected goal does not belong to the family's default plan.");
+    }
+
+    // Matching only ever targets the family's default plan (Part E I-PA4) and is one-to-one
+    // (same invariant as the DB's unique partial index on actual_transaction.planned_transaction_id).
+    private async Task<ActionResult?> ValidatePlannedTransactionAsync(long familyId, long? plannedTransactionId, long? excludingActualId, CancellationToken cancellationToken)
+    {
+        if (plannedTransactionId is null) return null;
+        var defaultPlan = await dbContext.Plans.AsNoTracking().SingleOrDefaultAsync(plan => plan.FamilyId == familyId && plan.IsDefault, cancellationToken);
+        if (defaultPlan is null) return StatusCode(500, "No default plan is configured for this family.");
+        var belongsToDefaultPlan = await dbContext.PlannedTransactions.AnyAsync(planned => planned.Id == plannedTransactionId && planned.FamilyId == familyId && planned.PlanId == defaultPlan.Id, cancellationToken);
+        if (!belongsToDefaultPlan) return BadRequest("The selected planned transaction does not belong to the family's default plan.");
+        var alreadyMatched = await dbContext.ActualTransactions.AnyAsync(actual => actual.PlannedTransactionId == plannedTransactionId && (excludingActualId == null || actual.Id != excludingActualId.Value), cancellationToken);
+        return alreadyMatched ? BadRequest("The selected planned transaction is already matched to another actual transaction.") : null;
     }
 
     private async Task<ActionResult?> Validate(long familyId, DateOnly date, decimal amount, long? from, long? to, long? categoryId, CancellationToken cancellationToken)
