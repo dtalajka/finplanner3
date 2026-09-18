@@ -5,10 +5,12 @@ namespace FinPlanner.Api.Contracts;
 public sealed record UserResponse(long Id, string Name, UserRole Role, long FamilyId, string Email);
 public sealed record RegisterRequest(string FamilyName, string Name, string Email, string Password);
 public sealed record LoginRequest(string Email, string Password);
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public sealed record CreateFamilyMemberRequest(string Name, string Email, string Password, UserRole Role);
 
 public sealed record PlanResponse(long Id, string Name, string? Description, bool IsDefault, bool IsActive, decimal? MinimumReserve);
 public sealed record CreatePlanRequest(string Name, string? Description);
+public sealed record UpdatePlanRequest(string Name, string? Description);
 public sealed record SetPlanReserveRequest(decimal? MinimumReserve);
 
 public sealed record FamilyResponse(long Id, string Name, decimal DefaultMinimumReserve);

@@ -300,4 +300,59 @@ public class AuthenticationTests
         Assert.NotEqual(plainPassword, storedUser.PasswordHash);
         Assert.True(storedUser.PasswordHash.Length > plainPassword.Length); // PBKDF2 output is a long encoded blob, not the raw password
     }
+
+    [Fact]
+    public async Task ChangePassword_WithCorrectCurrentPassword_UpdatesHash_AndSessionStaysValid()
+    {
+        // Part N decision #3: the session is not force-invalidated after a password change — verified here by
+        // hitting an authenticated endpoint on the same client right after the change, with no re-login.
+        await using var factory = new AuthWebApplicationFactory();
+        using var client = factory.CreateClient();
+        const string oldPassword = "correct-horse-battery";
+        const string newPassword = "new-correct-horse";
+        var email = $"{Guid.NewGuid():N}@example.com";
+        await client.PostAsJsonAsync("/api/auth/register", MakeRegisterRequest(email: email, password: oldPassword));
+
+        var changeResponse = await client.PutAsJsonAsync("/api/auth/password", new ChangePasswordRequest(oldPassword, newPassword));
+        Assert.Equal(HttpStatusCode.NoContent, changeResponse.StatusCode);
+
+        var meResponse = await client.GetAsync("/api/auth/me");
+        Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
+
+        using var freshClient = factory.CreateClient();
+        var loginWithNew = await freshClient.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, newPassword));
+        Assert.Equal(HttpStatusCode.OK, loginWithNew.StatusCode);
+
+        using var freshClient2 = factory.CreateClient();
+        var loginWithOld = await freshClient2.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, oldPassword));
+        Assert.Equal(HttpStatusCode.Unauthorized, loginWithOld.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WithWrongCurrentPassword_IsRejected_AndDoesNotChangeIt()
+    {
+        await using var factory = new AuthWebApplicationFactory();
+        using var client = factory.CreateClient();
+        const string oldPassword = "correct-horse-battery";
+        var email = $"{Guid.NewGuid():N}@example.com";
+        await client.PostAsJsonAsync("/api/auth/register", MakeRegisterRequest(email: email, password: oldPassword));
+
+        var changeResponse = await client.PutAsJsonAsync("/api/auth/password", new ChangePasswordRequest("totally-wrong", "new-correct-horse"));
+        Assert.Equal(HttpStatusCode.BadRequest, changeResponse.StatusCode);
+
+        using var freshClient = factory.CreateClient();
+        var loginStillWorks = await freshClient.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, oldPassword));
+        Assert.Equal(HttpStatusCode.OK, loginStillWorks.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangePassword_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        await using var factory = new AuthWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync("/api/auth/password", new ChangePasswordRequest("whatever", "new-correct-horse"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

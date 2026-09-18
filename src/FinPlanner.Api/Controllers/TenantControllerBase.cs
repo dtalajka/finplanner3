@@ -25,7 +25,9 @@ public abstract class TenantControllerBase(CurrentUserContext currentUser) : Con
     {
         if (requestedPlanId is { } planId)
         {
-            var belongsToFamily = await dbContext.Plans.AnyAsync(plan => plan.Id == planId && plan.FamilyId == familyId, cancellationToken);
+            // Part N: a soft-deleted (IsActive=false) plan must not be resolvable via an explicit planId — otherwise
+            // "deleting" a plan would only hide it from listings while its data could still be targeted directly.
+            var belongsToFamily = await dbContext.Plans.AnyAsync(plan => plan.Id == planId && plan.FamilyId == familyId && plan.IsActive, cancellationToken);
             return belongsToFamily ? (planId, null) : (default, BadRequest("The selected plan does not belong to this family."));
         }
         var defaultPlan = await dbContext.Plans.AsNoTracking().SingleOrDefaultAsync(plan => plan.FamilyId == familyId && plan.IsDefault, cancellationToken);

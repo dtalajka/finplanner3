@@ -23,7 +23,7 @@ public class PlansControllerTests
         var updated = Assert.IsType<PlanResponse>(Assert.IsType<OkObjectResult>(setDefault.Result).Value);
         Assert.True(updated.IsDefault);
 
-        var list = await controller.List(CancellationToken.None);
+        var list = await controller.List(false, CancellationToken.None);
         var plans = Assert.IsType<List<PlanResponse>>(Assert.IsType<OkObjectResult>(list.Result).Value);
         Assert.Single(plans, plan => plan.IsDefault);
         Assert.True(plans.Single(plan => plan.Id == newPlan.Id).IsDefault);
@@ -52,7 +52,7 @@ public class PlansControllerTests
         await TestDb.SeedFamilyWithDefaultPlanAsync(db, "Family B");
 
         var controller = new PlansController(db, new CurrentUserContext { FamilyId = familyA.Id });
-        var result = await controller.List(CancellationToken.None);
+        var result = await controller.List(false, CancellationToken.None);
 
         var plans = Assert.IsType<List<PlanResponse>>(Assert.IsType<OkObjectResult>(result.Result).Value);
         Assert.Single(plans);
@@ -65,7 +65,7 @@ public class PlansControllerTests
         await using var db = TestDb.CreateContext();
         var controller = new PlansController(db, new CurrentUserContext());
 
-        var result = await controller.List(CancellationToken.None);
+        var result = await controller.List(false, CancellationToken.None);
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
@@ -109,5 +109,107 @@ public class PlansControllerTests
         var result = await controller.SetReserve(familyBPlan.Id, new SetPlanReserveRequest(100m), CancellationToken.None);
 
         Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Update_RenamesPlanAndUpdatesDescription()
+    {
+        await using var db = TestDb.CreateContext();
+        var (family, plan) = await TestDb.SeedFamilyWithDefaultPlanAsync(db);
+        var controller = new PlansController(db, new CurrentUserContext { FamilyId = family.Id });
+
+        var result = await controller.Update(plan.Id, new UpdatePlanRequest("Renamed plan", "New description"), CancellationToken.None);
+
+        var updated = Assert.IsType<PlanResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
+        Assert.Equal("Renamed plan", updated.Name);
+        Assert.Equal("New description", updated.Description);
+    }
+
+    [Fact]
+    public async Task Update_BlankName_IsRejected()
+    {
+        await using var db = TestDb.CreateContext();
+        var (family, plan) = await TestDb.SeedFamilyWithDefaultPlanAsync(db);
+        var controller = new PlansController(db, new CurrentUserContext { FamilyId = family.Id });
+
+        var result = await controller.Update(plan.Id, new UpdatePlanRequest("   ", null), CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Update_PlanFromAnotherFamily_ReturnsNotFound()
+    {
+        await using var db = TestDb.CreateContext();
+        var (familyA, _) = await TestDb.SeedFamilyWithDefaultPlanAsync(db, "Family A");
+        var (_, familyBPlan) = await TestDb.SeedFamilyWithDefaultPlanAsync(db, "Family B");
+        var controller = new PlansController(db, new CurrentUserContext { FamilyId = familyA.Id });
+
+        var result = await controller.Update(familyBPlan.Id, new UpdatePlanRequest("Hijacked", null), CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Delete_NonDefaultPlan_SoftDeletesIt()
+    {
+        await using var db = TestDb.CreateContext();
+        var (family, _) = await TestDb.SeedFamilyWithDefaultPlanAsync(db);
+        var extra = await TestDb.AddPlanAsync(db, family.Id, "New car");
+        var controller = new PlansController(db, new CurrentUserContext { FamilyId = family.Id });
+
+        var result = await controller.Delete(extra.Id, CancellationToken.None);
+
+        Assert.IsType<NoContentResult>(result);
+        var list = await controller.List(true, CancellationToken.None);
+        var plans = Assert.IsType<List<PlanResponse>>(Assert.IsType<OkObjectResult>(list.Result).Value);
+        Assert.False(plans.Single(plan => plan.Id == extra.Id).IsActive);
+        // Deleted plans are hidden by default (includeInactive=false).
+        var activeOnly = await controller.List(false, CancellationToken.None);
+        var activePlans = Assert.IsType<List<PlanResponse>>(Assert.IsType<OkObjectResult>(activeOnly.Result).Value);
+        Assert.DoesNotContain(activePlans, plan => plan.Id == extra.Id);
+    }
+
+    [Fact]
+    public async Task Delete_DefaultPlan_IsRejected()
+    {
+        await using var db = TestDb.CreateContext();
+        var (family, defaultPlan) = await TestDb.SeedFamilyWithDefaultPlanAsync(db);
+        var controller = new PlansController(db, new CurrentUserContext { FamilyId = family.Id });
+
+        var result = await controller.Delete(defaultPlan.Id, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task Delete_PlanFromAnotherFamily_ReturnsNotFound()
+    {
+        await using var db = TestDb.CreateContext();
+        var (familyA, _) = await TestDb.SeedFamilyWithDefaultPlanAsync(db, "Family A");
+        var (familyB, _) = await TestDb.SeedFamilyWithDefaultPlanAsync(db, "Family B");
+        var familyBExtra = await TestDb.AddPlanAsync(db, familyB.Id, "Other");
+        var controller = new PlansController(db, new CurrentUserContext { FamilyId = familyA.Id });
+
+        var result = await controller.Delete(familyBExtra.Id, CancellationToken.None);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task DeletedPlan_IsNoLongerResolvableViaExplicitPlanId()
+    {
+        // Regression test for the gap Part N found: ResolvePlanAsync must reject a soft-deleted plan even when
+        // it is explicitly requested, otherwise "deleting" a plan would only hide it from listings.
+        await using var db = TestDb.CreateContext();
+        var (family, _) = await TestDb.SeedFamilyWithDefaultPlanAsync(db);
+        var extra = await TestDb.AddPlanAsync(db, family.Id, "New car");
+        var plansController = new PlansController(db, new CurrentUserContext { FamilyId = family.Id });
+        await plansController.Delete(extra.Id, CancellationToken.None);
+
+        var goalsController = new GoalsController(db, new CurrentUserContext { FamilyId = family.Id });
+        var result = await goalsController.List(extra.Id, false, CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 }

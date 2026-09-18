@@ -73,6 +73,24 @@ public sealed class AuthController(FinPlannerDbContext dbContext, CurrentUserCon
         return NoContent();
     }
 
+    [HttpPut("password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (RequireFamily(out _) is { } unauthorized) return unauthorized;
+        var user = await dbContext.Users.SingleAsync(item => item.Id == CurrentUser.UserId, cancellationToken);
+        if (user.PasswordHash is null || Hasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword) == PasswordVerificationResult.Failed)
+            return BadRequest("Current password is incorrect.");
+        if (!IsValidPassword(request.NewPassword)) return BadRequest($"Password must be at least {MinPasswordLength} characters.");
+
+        // The cookie session stays valid after a password change (Part N decision #3) — there is no
+        // server-side session store to revoke anyway (Part M decision #7), so forcing re-login here would not
+        // actually invalidate any other device's session, only inconvenience the user changing their own.
+        user.PasswordHash = Hasher.HashPassword(user, request.NewPassword);
+        user.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("me")]
     public async Task<ActionResult<UserResponse>> Me(CancellationToken cancellationToken)
     {
