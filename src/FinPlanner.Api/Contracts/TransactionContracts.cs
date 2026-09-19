@@ -2,7 +2,7 @@ using FinPlanner.Api.Domain;
 
 namespace FinPlanner.Api.Contracts;
 
-public sealed record UserResponse(long Id, string Name, UserRole Role, long FamilyId, string Email);
+public sealed record UserResponse(long Id, string Name, UserRole Role, long FamilyId, string Email, DateTime CreatedAt);
 public sealed record RegisterRequest(string FamilyName, string Name, string Email, string Password);
 public sealed record LoginRequest(string Email, string Password);
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

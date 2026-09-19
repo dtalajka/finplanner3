@@ -13,7 +13,7 @@ namespace FinPlanner.Api.Controllers;
 public sealed class ForecastController(FinPlannerDbContext dbContext, CurrentUserContext currentUser) : TenantControllerBase(currentUser)
 {
     private const int MinHorizonMonths = 1;
-    private const int MaxHorizonMonths = 36;
+    private const int MaxHorizonMonths = 60; // Part O: raised from 36 (Part H decision #8) to support a 5-year horizon selector in the UI.
     private const int DefaultHorizonMonths = 12;
 
     [HttpGet("forecast")]

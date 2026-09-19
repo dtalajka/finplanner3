@@ -84,8 +84,9 @@ public class ForecastControllerTests
     }
 
     [Fact]
-    public async Task HorizonMonths_IsClampedToThirtySixMonths()
+    public async Task HorizonMonths_IsClampedToSixtyMonths()
     {
+        // Part O: the cap was raised from 36 to 60 months to support a 5-year horizon selector in the UI.
         await using var db = TestDb.CreateContext();
         var (family, planA) = await TestDb.SeedFamilyWithDefaultPlanAsync(db);
         var account = await TestDb.AddAccountAsync(db, family.Id);
@@ -97,7 +98,7 @@ public class ForecastControllerTests
         var result = await forecastController.Get(planA.Id, 1000, CancellationToken.None);
 
         var response = Assert.IsType<ForecastResponse>(Assert.IsType<OkObjectResult>(result.Result).Value);
-        var expectedHorizonEnd = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(36);
+        var expectedHorizonEnd = DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(60);
         Assert.Equal(expectedHorizonEnd, response.HorizonEnd);
         Assert.All(response.Events, e => Assert.True(e.Date <= expectedHorizonEnd));
     }

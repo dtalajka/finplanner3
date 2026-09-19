@@ -21,7 +21,7 @@ public sealed class UsersController(FinPlannerDbContext dbContext, CurrentUserCo
     {
         if (RequireFamily(out var familyId) is { } unauthorized) return unauthorized;
         return Ok(await dbContext.Users.AsNoTracking().Where(user => user.FamilyId == familyId).OrderBy(user => user.Name)
-            .Select(user => new UserResponse(user.Id, user.Name, user.Role, user.FamilyId, user.Email)).ToListAsync(cancellationToken));
+            .Select(user => new UserResponse(user.Id, user.Name, user.Role, user.FamilyId, user.Email, user.CreatedAt)).ToListAsync(cancellationToken));
     }
 
     // Adds another member to the CALLER's own family — never a way to join or create a different family.

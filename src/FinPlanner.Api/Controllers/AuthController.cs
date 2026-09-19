@@ -111,5 +111,5 @@ public sealed class AuthController(FinPlannerDbContext dbContext, CurrentUserCon
     private static bool IsValidEmail(string email) => !string.IsNullOrWhiteSpace(email) && email.Contains('@') && email.Length <= 320;
     private static bool IsValidPassword(string password) => !string.IsNullOrEmpty(password) && password.Length >= MinPasswordLength;
 
-    internal static UserResponse ToResponse(User user) => new(user.Id, user.Name, user.Role, user.FamilyId, user.Email);
+    internal static UserResponse ToResponse(User user) => new(user.Id, user.Name, user.Role, user.FamilyId, user.Email, user.CreatedAt);
 }

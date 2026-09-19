@@ -230,6 +230,8 @@ public class AuthenticationTests
 
         Assert.Single(usersForA!);
         Assert.Equal("A-Owner", usersForA![0].Name);
+        // Part O: UserResponse gained CreatedAt so the Users management table can show it — verify it round-trips.
+        Assert.True(usersForA[0].CreatedAt > DateTime.UtcNow.AddMinutes(-5));
     }
 
     [Fact]
