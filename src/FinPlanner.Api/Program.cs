@@ -32,10 +32,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.Name = "finplanner.auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
-        // Secure=Always only in actual Production — Development and the integration-test "Testing"
-        // environment both run over plain HTTP and must tolerate that (a Secure cookie is silently refused
-        // by any HTTP client over a non-HTTPS request, which would otherwise break login everywhere but prod).
-        options.Cookie.SecurePolicy = builder.Environment.IsProduction() ? CookieSecurePolicy.Always : CookieSecurePolicy.SameAsRequest;
+        // SameAsRequest in every environment: the cookie is Secure over HTTPS and plain over HTTP, so the app
+        // also works when deployed over plain HTTP (a Secure cookie is silently refused on a non-HTTPS request).
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromDays(14);
         options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin = context => { context.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
