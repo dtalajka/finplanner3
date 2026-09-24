@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # One image = API + web. The React build is copied into the API's wwwroot and served by ASP.NET Core,
 # so the browser talks to a single origin (no CORS, auth cookie works as first-party).
 

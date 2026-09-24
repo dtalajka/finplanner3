@@ -29,7 +29,8 @@ pipeline {
     }
 
     environment {
-        DOCKER_BUILDKIT = '1'
+        // The agent's docker CLI has no buildx component, so use the legacy builder explicitly.
+        DOCKER_BUILDKIT = '0'
         BUILDKIT_PROGRESS = 'plain'
     }
 
