@@ -55,6 +55,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// In the container image the built React app lives in wwwroot and is served from the same origin as the API.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors("frontend");
 
 app.UseAuthentication();
@@ -64,7 +69,8 @@ app.UseMiddleware<TenantResolutionMiddleware>();
 
 app.MapControllers();
 
-if (!app.Environment.IsEnvironment("Testing"))
+// Demo family with a known password — only ever seeded in Development, never in a deployed environment.
+if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     try
