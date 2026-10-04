@@ -163,7 +163,7 @@ function ForecastChart({ asOf, horizonEnd, trajectory, minimumDate, accounts, mo
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set())
   const toggleSeriesVisibility = (key: string) => setHiddenKeys(previous => {
     const next = new Set(previous)
-    next.has(key) ? next.delete(key) : next.add(key)
+    if (next.has(key)) next.delete(key); else next.add(key)
     return next
   })
   const width = measured.width || 680, height = measured.height || 170, padLeft = 64, padRight = 12, padTop = 14, padBottom = 26
