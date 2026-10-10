@@ -40,6 +40,8 @@ const emptyGoalForm: GoalForm = { name: '', targetAmount: '', targetDate: new Da
 const NAV_TABS = ['Transactions', 'Planned', 'Recurring', 'Goals', 'Forecast', 'Compliance', 'Shared Expenses', 'Categories', 'Accounts', 'Users']
 const ACTIVE_VIEW_STORAGE_KEY = 'finplanner:activeView'
 function loadStoredActiveView(): string { try { const saved = localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY); return saved && NAV_TABS.includes(saved) ? saved : 'Transactions' } catch { return 'Transactions' } }
+const FORECAST_HIDDEN_SERIES_STORAGE_KEY = 'finplanner:forecastHiddenSeries'
+function loadStoredHiddenSeries(): Set<string> { try { const saved = localStorage.getItem(FORECAST_HIDDEN_SERIES_STORAGE_KEY); const parsed = saved ? JSON.parse(saved) : []; return Array.isArray(parsed) ? new Set(parsed.filter((item: unknown) => typeof item === 'string')) : new Set() } catch { return new Set() } }
 
 type SortState = { key: string; dir: 'asc' | 'desc' } | null
 type DataColumn = { key: string; label: string; get: (row: any) => string; numeric?: boolean }
@@ -158,9 +160,14 @@ function ForecastChart({ asOf, horizonEnd, trajectory, minimumDate, accounts, mo
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isHovering, onToggleMaximize])
-  // Grafana-style legend: each entry is an independent on/off toggle (not "isolate on click"), so any
-  // combination of lines can be shown at once — a line's key is in this set while it is hidden.
-  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set())
+  // Grafana-style legend — a line's key is in this set while it is hidden. Persisted to localStorage so
+  // the selection survives a page refresh (keyed by account id / "total", not by any per-family scope —
+  // a single-browser convenience, same as the activeView tab persistence above).
+  const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(loadStoredHiddenSeries)
+  useEffect(() => { try { localStorage.setItem(FORECAST_HIDDEN_SERIES_STORAGE_KEY, JSON.stringify([...hiddenKeys])) } catch { /* private browsing or storage disabled — persistence is a convenience, not required */ } }, [hiddenKeys])
+  // Plain click isolates the clicked line (hides every other one); clicking the already-isolated line
+  // again restores all of them. Ctrl+click instead toggles just the clicked line on/off independently,
+  // leaving the rest of the current selection untouched.
   const toggleSeriesVisibility = (key: string) => setHiddenKeys(previous => {
     const next = new Set(previous)
     if (next.has(key)) next.delete(key); else next.add(key)
@@ -191,6 +198,11 @@ function ForecastChart({ asOf, horizonEnd, trajectory, minimumDate, accounts, mo
     })),
   ]
 
+  const isolateSeries = (key: string) => setHiddenKeys(previous => {
+    const isOnlyThisVisible = series.every(item => item.key === key ? !previous.has(item.key) : previous.has(item.key))
+    return isOnlyThisVisible ? new Set() : new Set(series.filter(item => item.key !== key).map(item => item.key))
+  })
+  const handleLegendClick = (key: string, event: ReactMouseEvent<HTMLButtonElement>) => { if (event.ctrlKey) toggleSeriesVisibility(key); else isolateSeries(key) }
   const visibleSeries = series.filter(item => !hiddenKeys.has(item.key))
   // Y-axis follows only the currently visible lines, so hiding a series lets the remaining ones use the
   // full vertical space instead of staying scaled to a hidden line's range.
@@ -251,7 +263,7 @@ function ForecastChart({ asOf, horizonEnd, trajectory, minimumDate, accounts, mo
       <strong>{hover.label}</strong>
       {visibleSeries.map(item => <div className="forecast-chart-tooltip-row" key={item.key}><span><span className="forecast-chart-legend-swatch" style={{ background: item.color }} />{item.label}</span><span>{money.format(valueAtTime(item.points, hoverTimeMs))}</span></div>)}
     </div>}
-    <div className="forecast-chart-legend">{series.map(item => <button className={hiddenKeys.has(item.key) ? 'forecast-chart-legend-item off' : 'forecast-chart-legend-item'} key={item.key} onClick={() => toggleSeriesVisibility(item.key)} type="button"><span className="forecast-chart-legend-swatch" style={{ background: item.color }} />{item.label}</button>)}</div>
+    <div className="forecast-chart-legend">{series.map(item => <button className={hiddenKeys.has(item.key) ? 'forecast-chart-legend-item off' : 'forecast-chart-legend-item'} key={item.key} onClick={event => handleLegendClick(item.key, event)} type="button"><span className="forecast-chart-legend-swatch" style={{ background: item.color }} />{item.label}</button>)}</div>
   </div>
 }
 
